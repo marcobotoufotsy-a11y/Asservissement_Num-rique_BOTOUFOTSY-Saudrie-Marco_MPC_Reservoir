@@ -1,0 +1,59 @@
+clc
+clear
+close all
+
+%% 1️⃣ Modèle linéaire (1 pompe)
+A = -0.5;
+B = 1;
+C = 1;
+D = 0;
+
+plant = ss(A,B,C,D);
+
+% Définir l'entrée comme variable manipulée
+plant = setmpcsignals(plant,'MV',1);
+
+%% 2️⃣ Création du MPC
+Ts = 1;  % temps d'échantillonnage
+mpcobj = mpc(plant,Ts);
+
+%% 3️⃣ Valeurs nominales
+mpcobj.Model.Nominal.U = 50;   % débit nominal
+mpcobj.Model.Nominal.Y = 50;   % volume nominal
+
+%% 4️⃣ Contraintes physiques
+mpcobj.MV.Min = 0;
+mpcobj.MV.Max = 100;
+
+mpcobj.OV.Min = 0;
+mpcobj.OV.Max = 100;
+
+%% 5️⃣ Poids
+mpcobj.Weights.MV = 0.1;
+mpcobj.Weights.MVrate = 0.2;
+mpcobj.Weights.OV = 1;
+
+%% 6️⃣ Simulation
+Tsim = 60;
+
+r = 50*ones(Tsim,1);   % consigne 50%
+
+% changement de consigne à t=30
+r(30:end) = 70;
+
+[y,t,u] = sim(mpcobj,Tsim,r);
+
+%% 7️⃣ Graphiques
+figure
+
+subplot(2,1,1)
+plot(t,y,'LineWidth',2)
+ylabel('Volume')
+title('Contrôle MPC - 1 Pompe')
+grid on
+
+subplot(2,1,2)
+plot(t,u,'LineWidth',2)
+ylabel('Débit Pompe')
+xlabel('Temps (s)')
+grid on
