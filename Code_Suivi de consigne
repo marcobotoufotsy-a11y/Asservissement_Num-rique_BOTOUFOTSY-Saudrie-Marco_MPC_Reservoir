@@ -1,0 +1,73 @@
+clc
+clear
+close all
+
+%% ================================
+% MODELE DU RESERVOIR
+%% ================================
+A = -0.5;
+B = 1;
+C = 1;
+D = 0;
+
+plant = ss(A,B,C,D);
+
+%% ================================
+% CREATION DU MPC
+%% ================================
+Ts = 1;
+mpcobj = mpc(plant,Ts);
+
+mpcobj.PredictionHorizon = 10;
+mpcobj.ControlHorizon = 2;
+
+mpcobj.Weights.ManipulatedVariables = 0;
+mpcobj.Weights.ManipulatedVariablesRate = 0.1;
+mpcobj.Weights.OutputVariables = 1;
+
+%% ================================
+% INITIALISATION
+%% ================================
+xmpc = mpcstate(mpcobj);
+
+Tsim = 40;
+
+r = 50*ones(Tsim,1);   % consigne = 50
+
+x = 0;                 % niveau initial
+
+y = zeros(Tsim,1);
+u = zeros(Tsim,1);
+
+%% ================================
+% SIMULATION
+%% ================================
+for k = 1:Tsim
+    
+    % commande MPC
+    u(k) = mpcmove(mpcobj,xmpc,x,r(k));
+    
+    % dynamique système (sans perturbation)
+    x = x + Ts*(-0.5*x + u(k));
+    
+    y(k) = x;
+end
+
+t = 0:Tsim-1;
+
+%% ================================
+% AFFICHAGE
+%% ================================
+figure
+plot(t,y,'b','LineWidth',2)
+hold on
+plot(t,r,'r--','LineWidth',2)
+
+xlabel('Temps (s)')
+ylabel('Niveau du réservoir')
+
+title('Suivi de consigne (MPC)')
+
+legend('Niveau','Consigne')
+
+grid on
